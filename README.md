@@ -2,6 +2,8 @@
 
 Minimal runtime-independent i18n for **Svelte 5** — a runes-based locale store, flat JSON messages, `{variable}` interpolation, and a tiny `<LocaleSwitcher />` component. No build-time code generation, no ICU message format, no global side effects.
 
+**[Live demo → svelte-i18n-five.vercel.app](https://svelte-i18n-five.vercel.app/)**
+
 ## Install
 
 ```bash
