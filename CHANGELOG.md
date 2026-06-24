@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0 — 2026-06-24
+
+### Added
+- **URL-locale routing** — a set of pure, SSR-safe helpers for path-prefix i18n (`/krakow` for the default locale, `/en/krakow`, `/uk/krakow` for the rest):
+  - `extractLocale(pathname, cfg)` — split a URL into `{ locale, pathname }`. The default locale is never a valid prefix, so `/pl/x` is **not** treated as a duplicate of `/x`.
+  - `localizeHref(path, locale, cfg)` — inverse: prefix non-default locales, preserve query/hash, leave external/`mailto:`/`#` links untouched, never double-prefix.
+  - `alternates(path, cfg, origin)` — the full `<link rel="alternate" hreflang>` set including `x-default`.
+  - `negotiateLocale(acceptLanguage, cfg)` — quality-weighted `Accept-Language` → best supported locale.
+  - `resolveLocale({ pathname, acceptLanguage }, cfg)` — URL prefix wins; negotiate only at the bare root; deep un-prefixed paths stay on the default (crawler-stable).
+  - `createReroute(cfg)` — drop-in SvelteKit `reroute` hook that maps prefixed URLs onto the existing route tree (no duplicate route files).
+  - New type `LocaleRoutingConfig`.
+- 41 unit tests for the routing helpers (extract/localize round-trips across all locales, query/hash preservation, `x-default`, `Accept-Language` weighting, the no-`/pl/`-duplicate invariant).
+- Demo: new interactive **URL routing (SSR)** playground.
+
 ## 0.1.1 — 2026-06-17
 
 ### Changed

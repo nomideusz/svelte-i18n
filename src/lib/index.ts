@@ -11,3 +11,14 @@ export type {
 export { createI18n } from './core/store.svelte.js';
 export { interpolate } from './core/interpolate.js';
 export { default as LocaleSwitcher } from './components/LocaleSwitcher.svelte';
+
+// URL-locale routing (SSR i18n)
+export type { LocaleRoutingConfig } from './core/routing.js';
+export {
+  extractLocale,
+  localizeHref,
+  alternates,
+  negotiateLocale,
+  resolveLocale,
+  createReroute,
+} from './core/routing.js';

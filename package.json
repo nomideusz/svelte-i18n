@@ -1,7 +1,7 @@
 {
   "name": "@nomideusz/svelte-i18n",
-  "version": "0.1.1",
-  "description": "Lightweight i18n for Svelte 5 — runes-based locale state, flat JSON messages, {variable} interpolation.",
+  "version": "0.2.0",
+  "description": "Lightweight i18n for Svelte 5 — runes-based locale state, flat JSON messages, {variable} interpolation, URL-locale routing.",
   "type": "module",
   "license": "MIT",
   "svelte": "./dist/index.js",
@@ -39,7 +39,7 @@
     "vitest": "^4.0.18",
     "marked": "^17.0.3"
   },
-  "keywords": ["svelte", "i18n", "internationalization", "locale", "translations", "runes", "svelte5"],
+  "keywords": ["svelte", "i18n", "internationalization", "locale", "translations", "runes", "svelte5", "ssr", "hreflang", "routing"],
   "repository": {
     "type": "git",
     "url": "https://github.com/nomideusz/svelte-i18n"

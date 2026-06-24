@@ -163,7 +163,96 @@ createI18n({
 });
 ```
 
+## URL-locale routing (SSR)
+
+For SEO you usually want each locale on its own crawlable URL — `/about` for the default locale, `/en/about` and `/uk/about` for the rest — with `hreflang` tags tying them together. The routing helpers are **pure functions** (no Svelte, no global state), so they run identically in `hooks`, `load`, and the browser.
+
+Strategy: **path prefix with a bare default locale**. The default locale is never a valid prefix, so `/pl/about` is treated as an ordinary path, not a duplicate of `/about`.
+
+```ts
+// src/lib/i18n-routing.ts
+import type { LocaleRoutingConfig } from '@nomideusz/svelte-i18n';
+
+export const routing: LocaleRoutingConfig = {
+  defaultLocale: 'pl',
+  supportedLocales: ['pl', 'en', 'uk'],
+};
+```
+
+### `reroute` — serve prefixed URLs from the existing route tree
+
+```ts
+// src/hooks.ts
+import { createReroute } from '@nomideusz/svelte-i18n';
+import { routing } from '$lib/i18n-routing';
+
+export const reroute = createReroute(routing);
+// /en/krakow → resolved by the /[city] route; no duplicate route files
+```
+
+### Resolve the per-request locale on the server
+
+```ts
+// src/hooks.server.ts
+import { resolveLocale } from '@nomideusz/svelte-i18n';
+import { routing } from '$lib/i18n-routing';
+
+export const handle = async ({ event, resolve }) => {
+  event.locals.locale = resolveLocale(
+    { pathname: event.url.pathname, acceptLanguage: event.request.headers.get('accept-language') },
+    routing,
+  );
+  return resolve(event, {
+    transformPageChunk: ({ html }) => html.replace('%lang%', event.locals.locale),
+  });
+};
+```
+
+URL prefix wins; the `Accept-Language` header is only consulted at the bare root (`/`), so deep un-prefixed paths stay on the default locale and remain stable for crawlers.
+
+### Localize links and emit `hreflang`
+
+```svelte
+<script lang="ts">
+  import { extractLocale, localizeHref, alternates } from '@nomideusz/svelte-i18n';
+  import { routing } from '$lib/i18n-routing';
+  import { page } from '$app/state';
+
+  // The canonical, locale-stripped path for the current page:
+  const path = $derived(extractLocale(page.url.pathname, routing).pathname);
+  const links = $derived(alternates(path, routing, 'https://example.com'));
+</script>
+
+<svelte:head>
+  {#each links as { hreflang, href }}
+    <link rel="alternate" {hreflang} {href} />
+  {/each}
+</svelte:head>
+
+<a href={localizeHref('/krakow', page.data.locale, routing)}>Kraków</a>
+```
+
+> SSR tip: pair this with a **synchronous** message loader and set `i18n.setLocale(locale)` from server data at the top of your root layout. Because SvelteKit's render pass is synchronous and non-interleaved, the singleton store resolves to the right locale per request without `AsyncLocalStorage` or context plumbing.
+
 ## API reference
+
+### Routing helpers
+
+```ts
+interface LocaleRoutingConfig {
+  defaultLocale: string;
+  supportedLocales: string[];
+}
+```
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `extractLocale(pathname, cfg)` | `{ locale, pathname }` | Split a URL into its locale and delocalized path. Default locale is never a prefix. |
+| `localizeHref(path, locale, cfg)` | `string` | Add the locale prefix (default locale → unchanged). Preserves query/hash; ignores external/`mailto:`/`#`; never double-prefixes. |
+| `alternates(path, cfg, origin)` | `{ hreflang, href }[]` | `hreflang` link set for every locale plus `x-default`. Pass the delocalized path. |
+| `negotiateLocale(acceptLanguage, cfg)` | `string` | Best supported locale from `Accept-Language` (quality-weighted, primary-subtag match). Falls back to default. |
+| `resolveLocale({ pathname, acceptLanguage }, cfg)` | `string` | URL prefix wins; negotiate only at the bare root; deep un-prefixed paths stay default. |
+| `createReroute(cfg)` | `({ url }) => string` | SvelteKit `reroute` hook — maps prefixed URLs onto the un-prefixed route tree. |
 
 ### `createI18n(config)`
 

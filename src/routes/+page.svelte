@@ -1,5 +1,13 @@
 <script lang="ts">
-	import { createI18n, interpolate, LocaleSwitcher } from '$lib/index.js';
+	import {
+		createI18n,
+		interpolate,
+		LocaleSwitcher,
+		extractLocale,
+		localizeHref,
+		alternates,
+		type LocaleRoutingConfig,
+	} from '$lib/index.js';
 	import { loader, LOCALE_LABELS } from './messages/index.js';
 
 	const i18n = createI18n({
@@ -84,6 +92,28 @@
 		}
 		return out;
 	});
+
+	// ── URL routing playground ──────────────────────────
+	const routingCfg: LocaleRoutingConfig = {
+		defaultLocale: 'en',
+		supportedLocales: ['en', 'pl', 'de', 'uk'],
+	};
+	let routePath = $state('/blog/yoga-for-beginners');
+	const routeExtracted = $derived(extractLocale(routePath, routingCfg));
+	const routeLinks = $derived(
+		routingCfg.supportedLocales.map((locale) => ({
+			locale,
+			href: localizeHref(routeExtracted.pathname, locale, routingCfg),
+		})),
+	);
+	const routeAlternates = $derived(
+		alternates(routeExtracted.pathname, routingCfg, 'https://example.com'),
+	);
+	const headMarkup = $derived(
+		routeAlternates
+			.map((a) => `<link rel="alternate" hreflang="${a.hreflang}" href="${a.href}" />`)
+			.join('\n'),
+	);
 
 	const snippetCode =
 		'<' +
@@ -292,6 +322,48 @@
 		</div>
 
 		<pre class="snippet">{snippetCode}</pre>
+	</section>
+
+	<!-- ═══ URL routing (SSR) ══════════════════════════════ -->
+	<section class="card">
+		<header class="card-hd">
+			<h2>4. URL routing <span class="hd-meta">(SSR)</span></h2>
+			<span class="hd-meta">path-prefix locales — default <code>en</code> stays un-prefixed</span>
+		</header>
+
+		<div class="row">
+			<div class="input-box">
+				<label for="r-path">Pathname (type a prefix like <code>/pl/…</code> or leave bare)</label>
+				<input id="r-path" type="text" bind:value={routePath} spellcheck="false" />
+			</div>
+		</div>
+
+		<div class="output-grid">
+			<div class="out">
+				<span class="out-label">extractLocale → locale</span>
+				<code class="out-val">{routeExtracted.locale}</code>
+			</div>
+			<div class="out">
+				<span class="out-label">extractLocale → pathname</span>
+				<code class="out-val">{routeExtracted.pathname}</code>
+			</div>
+		</div>
+
+		<div class="out out-wide">
+			<span class="out-label">localizeHref per locale</span>
+			<div class="chips">
+				{#each routeLinks as link}
+					<span class="chip" class:chip-on={link.locale === routeExtracted.locale}>
+						{link.locale}: <code>{link.href}</code>
+					</span>
+				{/each}
+			</div>
+		</div>
+
+		<div class="out out-wide">
+			<span class="out-label">alternates() → <code>&lt;svelte:head&gt;</code> markup</span>
+			<pre class="snippet">{headMarkup}</pre>
+		</div>
 	</section>
 
 	<section class="cta">
