@@ -19,6 +19,19 @@ export interface LocaleRoutingConfig {
   defaultLocale: Locale;
   /** Every locale the app serves, including the default. */
   supportedLocales: Locale[];
+  /**
+   * Optional URL-segment overrides: locale code → URL prefix. Use when the
+   * recognizable URL segment differs from the ISO language code — e.g.
+   * `{ uk: 'ua' }` serves Ukrainian at `/ua/*` while `hreflang` and
+   * `<html lang>` correctly stay `uk`. Locales without an entry use their
+   * own code as the prefix.
+   */
+  prefixes?: Record<Locale, string>;
+}
+
+/** The URL segment for a locale (alias if configured, else the code itself). */
+function urlPrefix(locale: Locale, config: LocaleRoutingConfig): string {
+  return config.prefixes?.[locale] ?? locale;
 }
 
 /** Locales that appear as a URL prefix = supported minus default. */
@@ -40,7 +53,7 @@ export function extractLocale(
   config: LocaleRoutingConfig,
 ): { locale: Locale; pathname: string } {
   for (const locale of prefixLocales(config)) {
-    const prefix = `/${locale}`;
+    const prefix = `/${urlPrefix(locale, config)}`;
     if (pathname === prefix) {
       return { locale, pathname: '/' };
     }
@@ -74,10 +87,11 @@ export function localizeHref(
   if (locale === config.defaultLocale) return path;
   if (!config.supportedLocales.includes(locale)) return path;
 
+  const seg = urlPrefix(locale, config);
   // Guard against double-prefixing if a caller passes an already-localized path.
-  if (path === `/${locale}` || path.startsWith(`/${locale}/`)) return path;
+  if (path === `/${seg}` || path.startsWith(`/${seg}/`)) return path;
 
-  return path === '/' ? `/${locale}` : `/${locale}${path}`;
+  return path === '/' ? `/${seg}` : `/${seg}${path}`;
 }
 
 /**

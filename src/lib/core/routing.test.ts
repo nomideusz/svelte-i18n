@@ -181,3 +181,63 @@ describe('createReroute', () => {
     expect(reroute({ url: new URL('https://x.pl/krakow') })).toBe('/krakow');
   });
 });
+
+describe('prefix aliases (URL segment ≠ locale/hreflang code)', () => {
+  // Ukrainian: URL says /ua/, but locale code + hreflang + <html lang> stay 'uk'.
+  const aliased: LocaleRoutingConfig = {
+    defaultLocale: 'pl',
+    supportedLocales: ['pl', 'en', 'uk'],
+    prefixes: { uk: 'ua' },
+  };
+
+  it('extractLocale maps the alias segment to the real locale code', () => {
+    expect(extractLocale('/ua/krakow', aliased)).toEqual({ locale: 'uk', pathname: '/krakow' });
+    expect(extractLocale('/ua', aliased)).toEqual({ locale: 'uk', pathname: '/' });
+  });
+
+  it('does NOT match the bare locale code when an alias exists', () => {
+    // /uk is no longer a locale URL — treated as an ordinary path.
+    expect(extractLocale('/uk/krakow', aliased)).toEqual({ locale: 'pl', pathname: '/uk/krakow' });
+  });
+
+  it('non-aliased locales still use their own code', () => {
+    expect(extractLocale('/en/krakow', aliased)).toEqual({ locale: 'en', pathname: '/krakow' });
+  });
+
+  it('localizeHref emits the alias segment', () => {
+    expect(localizeHref('/krakow', 'uk', aliased)).toBe('/ua/krakow');
+    expect(localizeHref('/', 'uk', aliased)).toBe('/ua');
+    expect(localizeHref('/krakow', 'en', aliased)).toBe('/en/krakow');
+  });
+
+  it('localizeHref does not double-prefix an aliased path', () => {
+    expect(localizeHref('/ua/krakow', 'uk', aliased)).toBe('/ua/krakow');
+  });
+
+  it('round-trips through the alias', () => {
+    for (const path of ['/', '/krakow', '/category/hatha']) {
+      const href = localizeHref(path, 'uk', aliased);
+      expect(extractLocale(href, aliased)).toEqual({ locale: 'uk', pathname: path });
+    }
+  });
+
+  it('alternates emit hreflang="uk" with /ua/ URLs', () => {
+    expect(alternates('/krakow', aliased, 'https://szkolyjogi.pl')).toEqual([
+      { hreflang: 'pl', href: 'https://szkolyjogi.pl/krakow' },
+      { hreflang: 'en', href: 'https://szkolyjogi.pl/en/krakow' },
+      { hreflang: 'uk', href: 'https://szkolyjogi.pl/ua/krakow' },
+      { hreflang: 'x-default', href: 'https://szkolyjogi.pl/krakow' },
+    ]);
+  });
+
+  it('reroute strips the alias segment', () => {
+    const reroute = createReroute(aliased);
+    expect(reroute({ url: new URL('https://x.pl/ua/krakow') })).toBe('/krakow');
+  });
+
+  it('resolveLocale trusts the alias prefix; negotiation still uses codes', () => {
+    expect(resolveLocale({ pathname: '/ua/krakow', acceptLanguage: 'en' }, aliased)).toBe('uk');
+    // Accept-Language carries language codes, not URL segments.
+    expect(resolveLocale({ pathname: '/', acceptLanguage: 'uk,en;q=0.8' }, aliased)).toBe('uk');
+  });
+});

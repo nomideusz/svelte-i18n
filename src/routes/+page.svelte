@@ -97,6 +97,7 @@
 	const routingCfg: LocaleRoutingConfig = {
 		defaultLocale: 'en',
 		supportedLocales: ['en', 'pl', 'de', 'uk'],
+		prefixes: { uk: 'ua' }, // URL /ua/… — hreflang stays "uk"
 	};
 	let routePath = $state('/blog/yoga-for-beginners');
 	const routeExtracted = $derived(extractLocale(routePath, routingCfg));
@@ -328,7 +329,7 @@
 	<section class="card">
 		<header class="card-hd">
 			<h2>4. URL routing <span class="hd-meta">(SSR)</span></h2>
-			<span class="hd-meta">path-prefix locales — default <code>en</code> stays un-prefixed</span>
+			<span class="hd-meta">path-prefix locales — default <code>en</code> bare; <code>uk</code> aliased to <code>/ua</code> (hreflang stays <code>uk</code>)</span>
 		</header>
 
 		<div class="row">

@@ -179,6 +179,20 @@ export const routing: LocaleRoutingConfig = {
 };
 ```
 
+### URL prefix aliases
+
+When the recognizable URL segment differs from the ISO language code, map it with `prefixes`. The classic case is Ukrainian: users recognize `/ua/`, but the language code (and therefore `hreflang` and `<html lang>`) must stay `uk`.
+
+```ts
+export const routing: LocaleRoutingConfig = {
+  defaultLocale: 'pl',
+  supportedLocales: ['pl', 'en', 'uk'],
+  prefixes: { uk: 'ua' }, // URL: /ua/krakow — hreflang & lang: "uk"
+};
+```
+
+`extractLocale('/ua/krakow', routing)` → `{ locale: 'uk', pathname: '/krakow' }`, `localizeHref('/krakow', 'uk', routing)` → `/ua/krakow`, and `alternates(...)` emits `hreflang="uk"` pointing at the `/ua/` URL. Locales without a `prefixes` entry use their own code. `negotiateLocale` is unaffected — `Accept-Language` always carries language codes (`uk`), not URL segments.
+
 ### `reroute` — serve prefixed URLs from the existing route tree
 
 ```ts
@@ -242,6 +256,8 @@ URL prefix wins; the `Accept-Language` header is only consulted at the bare root
 interface LocaleRoutingConfig {
   defaultLocale: string;
   supportedLocales: string[];
+  /** Optional locale code → URL segment overrides, e.g. { uk: 'ua' }. */
+  prefixes?: Record<string, string>;
 }
 ```
 

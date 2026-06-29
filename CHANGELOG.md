@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1 — 2026-06-29
+
+### Security
+- Bump vulnerable devDependencies to clear npm High CVE alerts: `vite` ^7.3.1 → ^7.3.5, `vitest` ^4.0.18 → ^4.1.0, `@sveltejs/kit` ^2.50.2 → ^2.60.1. No runtime deps affected.
+
+## 0.3.0 — 2026-06-24
+
+### Added
+- **URL prefix aliases** — new optional `prefixes` field on `LocaleRoutingConfig` maps a locale code to a different URL segment. Use when the recognizable URL differs from the ISO language code, e.g. `{ uk: 'ua' }` serves Ukrainian at `/ua/*` while `hreflang` and `<html lang>` correctly stay `uk`. `extractLocale`, `localizeHref`, `createReroute`, `resolveLocale`, and `alternates` all honor the alias for URLs while emitting the real locale code for `hreflang`/lang. Locales without an entry use their own code (fully backward compatible). +9 tests.
+
 ## 0.2.0 — 2026-06-24
 
 ### Added
