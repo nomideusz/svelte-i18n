@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.3 — 2026-08-02
+
+### Changed
+- `sideEffects: false` in package.json, so bundlers can tree-shake unused
+  exports. Every module here is pure; without the declaration a consumer
+  importing one helper had to ship the whole library.
+
+## 0.3.2 — 2026-07-05
+
+### Fixed
+- **`LocaleSwitcher` dropdown contrast** — native `<option>`s now get explicit `background`/`color` (`--asini-surface`/`--asini-text` with light fallbacks). Previously the options inherited the select's text color while the popup background stayed UA-rendered, so consumers that restyle the select (e.g. white text over a hero image or in dark themes) could end up with unreadable white-on-white options.
+
 ## 0.3.1 — 2026-06-29
 
 ### Security

@@ -63,4 +63,12 @@
     opacity: 0.5;
     cursor: wait;
   }
+
+  /* Native dropdown options inherit the select's text color, but the popup
+     background is UA-controlled. Pin both so consumers that restyle the
+     select (e.g. white text over a hero image) don't get unreadable options. */
+  .asini-locale-switcher option {
+    background: var(--asini-surface, #fff);
+    color: var(--asini-text, #000);
+  }
 </style>

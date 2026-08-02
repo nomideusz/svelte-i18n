@@ -1,8 +1,9 @@
 {
   "name": "@nomideusz/svelte-i18n",
-  "version": "0.3.1",
+  "version": "0.3.3",
   "description": "Lightweight i18n for Svelte 5 — runes-based locale state, flat JSON messages, {variable} interpolation, URL-locale routing.",
   "type": "module",
+  "sideEffects": false,
   "license": "MIT",
   "svelte": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,7 +14,12 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist", "CHANGELOG.md", "!dist/**/*.test.*", "!dist/**/*.spec.*"],
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "!dist/**/*.test.*",
+    "!dist/**/*.spec.*"
+  ],
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -26,20 +32,33 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "peerDependencies": { "svelte": "^5.0.0" },
-  "devDependencies": {
-    "@sveltejs/adapter-auto": "^7.0.0",
-    "@sveltejs/kit": "^2.60.1",
-    "@sveltejs/package": "^2.5.7",
-    "@sveltejs/vite-plugin-svelte": "^6.2.4",
-    "svelte": "^5.51.0",
-    "svelte-check": "^4.3.6",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.5",
-    "vitest": "^4.1.0",
-    "marked": "^17.0.3"
+  "peerDependencies": {
+    "svelte": "^5.0.0"
   },
-  "keywords": ["svelte", "i18n", "internationalization", "locale", "translations", "runes", "svelte5", "ssr", "hreflang", "routing"],
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "^7.0.1",
+    "@sveltejs/kit": "^2.69.1",
+    "@sveltejs/package": "^2.5.8",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "marked": "^17.0.6",
+    "svelte": "^5.56.4",
+    "svelte-check": "^4.7.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.9"
+  },
+  "keywords": [
+    "svelte",
+    "i18n",
+    "internationalization",
+    "locale",
+    "translations",
+    "runes",
+    "svelte5",
+    "ssr",
+    "hreflang",
+    "routing"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/nomideusz/svelte-i18n"
