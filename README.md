@@ -1,6 +1,6 @@
 # @nomideusz/svelte-i18n
 
-[![npm](https://badgen.net/npm/v/@nomideusz/svelte-i18n)](https://www.npmjs.com/package/@nomideusz/svelte-i18n) [![license](https://badgen.net/badge/license/MIT/blue)](./LICENSE)
+[![npm](https://badgen.net/npm/v/@nomideusz/svelte-i18n)](https://www.npmjs.com/package/@nomideusz/svelte-i18n) [![license](https://badgen.net/badge/license/MIT/blue)](https://github.com/nomideusz/svelte-i18n/blob/main/LICENSE)
 
 Minimal runtime-independent i18n for **Svelte 5** — a runes-based locale store, flat JSON messages, `{variable}` interpolation, and a tiny `<LocaleSwitcher />` component. No build-time code generation, no ICU message format, no global side effects.
 
