@@ -1,6 +1,6 @@
 {
   "name": "@nomideusz/svelte-i18n",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "Lightweight i18n for Svelte 5 — runes-based locale state, flat JSON messages, {variable} interpolation, URL-locale routing.",
   "type": "module",
   "sideEffects": false,

@@ -165,6 +165,29 @@ createI18n({
 });
 ```
 
+## Locale-aware formatting
+
+`formatDateTime`, `formatMoney`, and `intlLocale` are **pure, store-free functions** — no Svelte, no reactive state — so the same call works in components, `load` functions, server hooks, and email templates, where the reactive locale in `createI18n` would race under concurrent per-request (or per-recipient) rendering. Pages and emails share one regional policy.
+
+```ts
+import { formatDateTime, formatMoney, intlLocale } from '@nomideusz/svelte-i18n';
+
+const d = new Date('2026-06-15T16:00:00Z');
+
+formatDateTime(d, 'en', 'Europe/Warsaw'); // → "Monday, 15 June 2026 at 18:00"
+formatDateTime(d, 'en-US', 'UTC');        // → "Monday, June 15, 2026 at 04:00 PM"
+
+formatMoney(9000, 'PLN', 'pl'); // → "90,00 zł"
+formatMoney(9000, 'JPY', 'en'); // → "JP¥9,000" — not ¥90
+
+intlLocale('en');    // → "en-GB"
+intlLocale('en-US'); // → "en-US" (a tag with a region is trusted as-is)
+```
+
+- **`intlLocale(locale)`** gives bare locale codes a regional default: `en → en-GB`, `pl → pl-PL`, `uk → uk-UA`. The one that earns its keep is `en → en-GB`: bare `'en'` makes `Intl` pick US conventions (`6/15/2026`, 12-hour clock), which is wrong for a European audience and easy to ship without noticing. Tags that already carry a region (`en-US`, `de-AT`) are trusted as-is; unknown bare codes (`de`) pass through rather than guessing. Both formatters call it internally, so bare app locales just work.
+- **`formatDateTime(date, locale, timeZone?)`** renders weekday, full date and time — the "when is this happening" rendering. Pass an IANA `timeZone` (e.g. `'Europe/Warsaw'`) whenever the code may run on a machine whose zone differs from the reader's — i.e. always on servers.
+- **`formatMoney(minorUnits, currency, locale)`** takes money as **integer minor units** (grosze, cents). The divisor is derived from the currency via `Intl.NumberFormat` rather than hardcoded to 100 — JPY has no minor unit, so `9000` is ¥9,000, not ¥90.
+
 ## URL-locale routing (SSR)
 
 For SEO you usually want each locale on its own crawlable URL — `/about` for the default locale, `/en/about` and `/uk/about` for the rest — with `hreflang` tags tying them together. The routing helpers are **pure functions** (no Svelte, no global state), so they run identically in `hooks`, `load`, and the browser.
@@ -301,6 +324,16 @@ interpolate(template: string, params?: Record<string, string | number>): string
 ```
 
 Substitutes `{var}` placeholders in `template`. Missing params left as-is.
+
+### Formatting helpers
+
+Pure and store-free — importable anywhere, server included.
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `intlLocale(locale)` | `string` | Regional default for bare codes (`en → en-GB`, `pl → pl-PL`, `uk → uk-UA`); region-carrying tags and unknown codes pass through. |
+| `formatDateTime(date, locale, timeZone?)` | `string` | Weekday + full date + time in the locale's conventions (24-hour for `en-GB`). Optional IANA time zone. |
+| `formatMoney(minorUnits, currency, locale)` | `string` | Integer minor units → localized currency string; divisor derived from the currency, not hardcoded to 100. |
 
 ### `<LocaleSwitcher />`
 

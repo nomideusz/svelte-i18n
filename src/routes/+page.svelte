@@ -6,6 +6,9 @@
 		extractLocale,
 		localizeHref,
 		alternates,
+		intlLocale,
+		formatDateTime,
+		formatMoney,
 		type LocaleRoutingConfig,
 	} from '$lib/index.js';
 	import { loader, LOCALE_LABELS } from './messages/index.js';
@@ -115,6 +118,37 @@
 			.map((a) => `<link rel="alternate" hreflang="${a.hreflang}" href="${a.href}" />`)
 			.join('\n'),
 	);
+
+	// ── Formatting playground ───────────────────────────
+	const FMT_LOCALES = ['en', 'en-US', 'pl', 'de', 'uk'];
+	let fmtDateStr = $state('2026-06-15T18:00');
+	let fmtTimeZone = $state('Europe/Warsaw');
+	let fmtMinor = $state<number | null>(9000);
+	let fmtCurrency = $state('PLN');
+	const fmtDate = $derived.by(() => {
+		const d = new Date(fmtDateStr);
+		return Number.isNaN(d.getTime()) ? null : d;
+	});
+	const fmtRows = $derived(
+		FMT_LOCALES.map((locale) => ({
+			locale,
+			intl: intlLocale(locale),
+			dateTime: fmtDate ? formatDateTime(fmtDate, locale, fmtTimeZone || undefined) : '—',
+			money:
+				typeof fmtMinor === 'number' && Number.isFinite(fmtMinor)
+					? formatMoney(fmtMinor, fmtCurrency, locale)
+					: '—',
+		})),
+	);
+
+	const fmtSnippet = [
+		"import { formatDateTime, formatMoney, intlLocale } from '@nomideusz/svelte-i18n';",
+		'',
+		"formatDateTime(date, 'en', 'Europe/Warsaw'); // \"Monday, 15 June 2026 at 18:00\"",
+		"formatMoney(9000, 'PLN', 'pl');              // \"90,00 zł\" — integer minor units in",
+		"formatMoney(9000, 'JPY', 'en');              // \"JP¥9,000\" — JPY has no minor unit",
+		"intlLocale('en');                            // \"en-GB\"",
+	].join('\n');
 
 	const snippetCode =
 		'<' +
@@ -365,6 +399,63 @@
 			<span class="out-label">alternates() → <code>&lt;svelte:head&gt;</code> markup</span>
 			<pre class="snippet">{headMarkup}</pre>
 		</div>
+	</section>
+
+	<!-- ═══ Locale-aware formatting ════════════════════════ -->
+	<section class="card">
+		<header class="card-hd">
+			<h2>5. <code>formatDateTime()</code> · <code>formatMoney()</code> · <code>intlLocale()</code></h2>
+			<span class="hd-meta">pure &amp; store-free — safe in <code>load</code>, hooks &amp; emails · one regional policy (<code>en → en-GB</code>)</span>
+		</header>
+
+		<div class="row fmt-fields">
+			<div class="input-box">
+				<label for="f-date">Date &amp; time</label>
+				<input id="f-date" type="datetime-local" bind:value={fmtDateStr} />
+			</div>
+			<div class="input-box">
+				<label for="f-tz">timeZone (optional)</label>
+				<select id="f-tz" bind:value={fmtTimeZone}>
+					<option value="">(browser default)</option>
+					<option>UTC</option>
+					<option>Europe/Warsaw</option>
+					<option>Europe/London</option>
+					<option>America/New_York</option>
+					<option>Asia/Tokyo</option>
+				</select>
+			</div>
+			<div class="input-box">
+				<label for="f-minor">Minor units (integer)</label>
+				<input id="f-minor" type="number" step="1" bind:value={fmtMinor} />
+			</div>
+			<div class="input-box">
+				<label for="f-cur">Currency</label>
+				<select id="f-cur" bind:value={fmtCurrency}>
+					<option>PLN</option>
+					<option>EUR</option>
+					<option>USD</option>
+					<option>GBP</option>
+					<option>JPY</option>
+				</select>
+			</div>
+		</div>
+
+		<div class="out out-wide fmt-out">
+			<span class="out-label">
+				Per locale — <code>intlLocale</code> · <code>formatDateTime</code> · <code>formatMoney</code>
+			</span>
+			<div class="fmt-rows">
+				{#each fmtRows as row}
+					<div class="fmt-row">
+						<span class="chip" class:chip-on={row.locale !== row.intl}>{row.locale} → {row.intl}</span>
+						<code class="out-val">{row.dateTime}</code>
+						<code class="out-val fmt-money">{row.money}</code>
+					</div>
+				{/each}
+			</div>
+		</div>
+
+		<pre class="snippet">{fmtSnippet}</pre>
 	</section>
 
 	<section class="cta">
@@ -632,7 +723,8 @@
 		color: var(--text-3);
 	}
 	.input-box input,
-	.input-box textarea {
+	.input-box textarea,
+	.input-box select {
 		padding: 8px 11px;
 		border: 1px solid var(--border-strong);
 		background: var(--surface-2);
@@ -644,7 +736,8 @@
 		resize: vertical;
 	}
 	.input-box input:focus,
-	.input-box textarea:focus {
+	.input-box textarea:focus,
+	.input-box select:focus {
 		border-color: var(--accent);
 		background: var(--bg);
 	}
@@ -780,6 +873,45 @@
 		font: 400 12px/1.55 ui-monospace, 'Cascadia Code', monospace;
 		color: var(--text-2);
 		overflow-x: auto;
+	}
+
+	/* ─── Formatting ───────────────────────────────────── */
+	.row.fmt-fields .input-box {
+		flex: 1;
+		min-width: 160px;
+	}
+	.fmt-out {
+		margin-bottom: 14px;
+	}
+	.fmt-rows {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-top: 4px;
+	}
+	.fmt-row {
+		display: grid;
+		grid-template-columns: 140px 1fr auto;
+		gap: 10px;
+		align-items: baseline;
+	}
+	.fmt-row .chip {
+		text-align: center;
+	}
+	.fmt-money {
+		color: var(--accent);
+	}
+	@media (max-width: 600px) {
+		.fmt-row {
+			grid-template-columns: 1fr;
+			gap: 3px;
+			padding-bottom: 8px;
+			border-bottom: 1px solid var(--border);
+		}
+		.fmt-row:last-child {
+			padding-bottom: 0;
+			border-bottom: none;
+		}
 	}
 
 	/* ─── CTA ──────────────────────────────────────────── */

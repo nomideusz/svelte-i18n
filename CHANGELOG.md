@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0 — 2026-08-09
+
+### Added
+- **Locale-aware formatting**: `formatDateTime`, `formatMoney`, `intlLocale`.
+  Pure and store-free, so they work on the server and in emails as well as in
+  components — the reactive locale in `createI18n` races under concurrent
+  per-request rendering, which is exactly where formatting is needed.
+  - `intlLocale` gives bare codes a regional default. The one that earns its
+    keep is `en → en-GB`: bare `'en'` makes Intl pick US conventions
+    (`6/15/2026`, 12-hour), which is wrong here and easy to ship unnoticed.
+    A tag with a region already in it is trusted as-is.
+  - `formatMoney` takes integer minor units and derives the divisor from the
+    currency rather than hardcoding 100 — JPY has no minor unit.
+
+  These previously lived in `@nomideusz/svelte-notify`, which was the wrong
+  home: an app formatting a price on a booking page should not import an email
+  template library.
+
 ## 0.3.3 — 2026-08-02
 
 ### Changed

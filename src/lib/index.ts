@@ -10,6 +10,10 @@ export type {
 
 export { createI18n } from './core/store.svelte.js';
 export { interpolate } from './core/interpolate.js';
+
+// Locale-aware formatting. Pure and store-free, so it works on the server and
+// in emails as well as in components.
+export { intlLocale, formatDateTime, formatMoney } from './core/format.js';
 export { default as LocaleSwitcher } from './components/LocaleSwitcher.svelte';
 
 // URL-locale routing (SSR i18n)
