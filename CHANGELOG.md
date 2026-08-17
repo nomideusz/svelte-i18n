@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1 — 2026-08-17
+
+### Added
+- `<LocaleSwitcher routing unprefixed>` — with a routing config the switch
+  navigates to the same page under the new prefix and writes the `locale`
+  cookie `createLocaleHandle` reads (unprefixed areas reload in place).
+  Without `routing` it stays the in-memory switch it was.
+
 ## 0.5.0 — 2026-08-17
 
 ### Added

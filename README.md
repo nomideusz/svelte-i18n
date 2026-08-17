@@ -103,6 +103,12 @@ A minimal drop-in `<select>`:
 
 Without `labels`, each locale renders as its uppercase code (`EN`, `PL`, `DE`). The `disabled` state is wired to `i18n.isLoading` so users can't spam-switch while messages are still loading.
 
+With URL-locale routing, pass the routing config so a switch actually navigates (`/krakow` → `/en/krakow`) and is remembered in the `locale` cookie that `createLocaleHandle` reads; `unprefixed` mirrors the handle's option for areas without a prefix (those reload in place):
+
+```svelte
+<LocaleSwitcher {i18n} {routing} unprefixed={['/admin']} />
+```
+
 Style via CSS variables on an ancestor — `--asini-font-sans`, `--asini-border`, `--asini-border-strong`, `--asini-surface`, `--asini-text`, `--asini-accent`, `--asini-radius-sm` — or pass a `class` prop and override styles directly:
 
 ```svelte
