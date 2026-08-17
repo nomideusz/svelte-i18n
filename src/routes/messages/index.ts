@@ -1,4 +1,4 @@
-import type { Messages } from '$lib/core/types.js';
+import type { Messages } from '#lib/core/types.js';
 import { en } from './en.js';
 import { pl } from './pl.js';
 import { de } from './de.js';

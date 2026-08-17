@@ -1,4 +1,4 @@
-import type { Messages } from '$lib/core/types.js';
+import type { Messages } from '#lib/core/types.js';
 
 export const pl: Messages = {
 	'nav.home': 'Start',

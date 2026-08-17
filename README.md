@@ -41,7 +41,7 @@ export const i18n = createI18n({
 
 ```svelte
 <script lang="ts">
-  import { i18n } from '$lib/i18n';
+  import { i18n } from '#lib/i18n';
 </script>
 
 <h1>{i18n.t('greeting', { name: 'Jan', count: 3 })}</h1>
@@ -68,7 +68,7 @@ If a key is missing, `t()` returns the key itself — easy to spot untranslated 
 
 ```svelte
 <script lang="ts">
-  import { i18n } from '$lib/i18n';
+  import { i18n } from '#lib/i18n';
 </script>
 
 <button onclick={() => i18n.setLocale('pl')}>Polski</button>
@@ -92,7 +92,7 @@ A minimal drop-in `<select>`:
 ```svelte
 <script lang="ts">
   import { LocaleSwitcher } from '@nomideusz/svelte-i18n';
-  import { i18n } from '$lib/i18n';
+  import { i18n } from '#lib/i18n';
 </script>
 
 <LocaleSwitcher
@@ -223,7 +223,7 @@ export const routing: LocaleRoutingConfig = {
 ```ts
 // src/hooks.ts
 import { createReroute } from '@nomideusz/svelte-i18n';
-import { routing } from '$lib/i18n-routing';
+import { routing } from '#lib/i18n-routing';
 
 export const reroute = createReroute(routing);
 // /en/krakow → resolved by the /[city] route; no duplicate route files
@@ -233,28 +233,24 @@ export const reroute = createReroute(routing);
 
 ```ts
 // src/hooks.server.ts
-import { resolveLocale } from '@nomideusz/svelte-i18n';
-import { routing } from '$lib/i18n-routing';
+import { createLocaleHandle } from '@nomideusz/svelte-i18n';
+import { routing } from '#lib/i18n-routing';
 
-export const handle = async ({ event, resolve }) => {
-  event.locals.locale = resolveLocale(
-    { pathname: event.url.pathname, acceptLanguage: event.request.headers.get('accept-language') },
-    routing,
-  );
-  return resolve(event, {
-    transformPageChunk: ({ html }) => html.replace('%lang%', event.locals.locale),
-  });
-};
+// Optional: areas served without a locale prefix (admin, auth) — there the
+// locale is a preference (cookie, else Accept-Language) and never written back.
+export const handle = createLocaleHandle(routing, { unprefixed: ['/admin'] });
 ```
 
-URL prefix wins; the `Accept-Language` header is only consulted at the bare root (`/`), so deep un-prefixed paths stay on the default locale and remain stable for crawlers.
+Per request the handle: redirects a bare-root (`/`) visitor to their locale's home when it is not the default (cookie preference, else `Accept-Language`); resolves the locale from the URL prefix and sets `event.locals.locale`; keeps the `locale` cookie in sync (a client-side switcher may write the same cookie); and replaces `%lang%` in `app.html`. Cookie-less visitors on the default locale get no `Set-Cookie`, so their responses stay CDN-cacheable. Compose it with `sequence()` from `@sveltejs/kit/hooks` and declare `locale: string` in `App.Locals`.
+
+The lower-level `resolveLocale({ pathname, acceptLanguage }, routing)` is exported too: URL prefix wins; `Accept-Language` is only consulted at the bare root, so deep un-prefixed paths stay on the default locale and remain stable for crawlers.
 
 ### Localize links and emit `hreflang`
 
 ```svelte
 <script lang="ts">
   import { extractLocale, localizeHref, alternates } from '@nomideusz/svelte-i18n';
-  import { routing } from '$lib/i18n-routing';
+  import { routing } from '#lib/i18n-routing';
   import { page } from '$app/state';
 
   // The canonical, locale-stripped path for the current page:
@@ -294,6 +290,7 @@ interface LocaleRoutingConfig {
 | `negotiateLocale(acceptLanguage, cfg)` | `string` | Best supported locale from `Accept-Language` (quality-weighted, primary-subtag match). Falls back to default. |
 | `resolveLocale({ pathname, acceptLanguage }, cfg)` | `string` | URL prefix wins; negotiate only at the bare root; deep un-prefixed paths stay default. |
 | `createReroute(cfg)` | `({ url }) => string` | SvelteKit `reroute` hook — maps prefixed URLs onto the un-prefixed route tree. |
+| `createLocaleHandle(cfg, { unprefixed? })` | SvelteKit `Handle` | Server hook: bare-root redirect, `locals.locale`, cookie sync, `%lang%`. |
 
 ### `createI18n(config)`
 

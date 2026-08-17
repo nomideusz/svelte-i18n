@@ -10,7 +10,7 @@
 		formatDateTime,
 		formatMoney,
 		type LocaleRoutingConfig,
-	} from '$lib/index.js';
+	} from '#lib/index.js';
 	import { loader, LOCALE_LABELS } from './messages/index.js';
 
 	const i18n = createI18n({
@@ -154,7 +154,7 @@
 		'<' +
 		"script>\n" +
 		"  import { LocaleSwitcher } from '@nomideusz/svelte-i18n';\n" +
-		"  import { i18n } from '$lib/i18n';\n" +
+		"  import { i18n } from '#lib/i18n';\n" +
 		'</' +
 		'script>\n\n' +
 		"<LocaleSwitcher {i18n} labels={{ en: 'English', pl: 'Polski' }} />";

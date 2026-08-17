@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — 2026-08-17
+
+### Added
+- **`createLocaleHandle(routing, { unprefixed? })`** — the SvelteKit server
+  hook every URL-routed app was hand-writing next to `createReroute`: bare-root
+  redirect to the visitor's locale, `locals.locale`, `locale` cookie sync
+  (no `Set-Cookie` for cookie-less default-locale visitors, so responses stay
+  CDN-cacheable), `%lang%` replacement. `unprefixed` names areas served without
+  a locale prefix, where the locale is a preference and never written back.
+
 ## 0.4.0 — 2026-08-09
 
 ### Added

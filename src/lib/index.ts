@@ -26,3 +26,5 @@ export {
   resolveLocale,
   createReroute,
 } from './core/routing.js';
+export type { LocaleHandleOptions } from './core/hooks.js';
+export { createLocaleHandle } from './core/hooks.js';
