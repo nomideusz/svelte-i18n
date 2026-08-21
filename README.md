@@ -326,6 +326,46 @@ The lower-level `resolveLocale({ pathname, acceptLanguage }, routing)` is export
 
 > SSR tip: pair this with a **synchronous** message loader and set `i18n.setLocale(locale)` from server data at the top of your root layout. Because SvelteKit's render pass is synchronous and non-interleaved, the singleton store resolves to the right locale per request without `AsyncLocalStorage` or context plumbing.
 
+### When the locale is a preference, not a URL
+
+Staff tools, admin panels and `noindex` pages have nothing to gain from crawlable per-locale URLs. There `createLocaleHandle` is the wrong shape — it exists to make a URL prefix authoritative. Read the cookie instead; it is the same one `<LocaleSwitcher />` writes:
+
+```ts
+// src/hooks.server.ts
+import { LOCALE_COOKIE } from '@nomideusz/svelte-i18n';
+import { i18n } from '#lib/i18n';
+
+export const handle: Handle = async ({ event, resolve }) => {
+  const cookie = event.cookies.get(LOCALE_COOKIE);
+  event.locals.locale = i18n.supportedLocales.includes(cookie ?? '') ? cookie! : 'pl';
+
+  return resolve(event, {
+    transformPageChunk: ({ html }) => html.replace('%lang%', event.locals.locale),
+  });
+};
+```
+
+```ts
+// src/routes/+layout.server.ts
+export const load = ({ locals }) => ({ locale: locals.locale });
+```
+
+```svelte
+<!-- src/routes/+layout.svelte -->
+<script lang="ts">
+  import { untrack } from 'svelte';
+  import { i18n } from '#lib/i18n';
+  let { data, children } = $props();
+
+  // Synchronous, so SSR's first paint is already in the right language. Read
+  // once on purpose: after hydration the switcher owns the locale, and
+  // re-applying the server's value would undo the visitor's choice.
+  untrack(() => i18n.setLocale(data.locale));
+</script>
+```
+
+That is the whole recipe — no routing config, no prefixes, no redirect.
+
 ## API reference
 
 ### Routing helpers
