@@ -240,4 +240,23 @@ describe('prefix aliases (URL segment ≠ locale/hreflang code)', () => {
     // Accept-Language carries language codes, not URL segments.
     expect(resolveLocale({ pathname: '/', acceptLanguage: 'uk,en;q=0.8' }, aliased)).toBe('uk');
   });
+
+  describe('localizeHref — query and hash are not part of the path', () => {
+    it('prefixes the root without inventing a trailing slash', () => {
+      // Was '/en/?a=b': the query hid the fact that the path was just '/'.
+      expect(localizeHref('/?a=b', 'en', cfg)).toBe('/en?a=b');
+      expect(localizeHref('/#map', 'en', cfg)).toBe('/en#map');
+      expect(localizeHref('/?a=b#map', 'en', cfg)).toBe('/en?a=b#map');
+    });
+
+    it('does not double-prefix a localized path that carries a query', () => {
+      // Was '/en/en?a=b': the guard compared against the whole string.
+      expect(localizeHref('/en?a=b', 'en', cfg)).toBe('/en?a=b');
+      expect(localizeHref('/en/krakow#x', 'en', cfg)).toBe('/en/krakow#x');
+    });
+
+    it('still prefixes an ordinary path with a query', () => {
+      expect(localizeHref('/krakow?style=hatha', 'en', cfg)).toBe('/en/krakow?style=hatha');
+    });
+  });
 });

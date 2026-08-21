@@ -45,4 +45,10 @@ describe('interpolate', () => {
   it('handles repeated placeholders', () => {
     expect(interpolate('{x} + {x} = {y}', { x: 2, y: 4 })).toBe('2 + 2 = 4');
   });
+
+  it('leaves inherited Object properties alone', () => {
+    // Rendered "function Object() { [native code] }" before the own-key guard.
+    expect(interpolate('{constructor}', { name: 'Jan' })).toBe('{constructor}');
+    expect(interpolate('{toString}')).toBe('{toString}');
+  });
 });

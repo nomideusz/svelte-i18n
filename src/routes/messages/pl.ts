@@ -23,4 +23,5 @@ export const pl: Messages = {
 	'school_few': '{count} szkoły',
 	'school_many': '{count} szkół',
 	'school_other': '{count} szkoły',
+	'switcher.a11y': 'Wybierz język',
 };

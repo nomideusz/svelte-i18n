@@ -4,6 +4,9 @@
  * Replace {variable} placeholders in a string with values from params.
  * Missing params are left as-is (e.g. "{name}" stays if name not provided).
  *
+ * Only own properties count: `{constructor}` with no such param stays literal
+ * rather than rendering `Object`'s inherited one.
+ *
  * @example
  * interpolate("Hello {name}, you have {count} items", { name: "Jan", count: 3 })
  * // → "Hello Jan, you have 3 items"
@@ -14,7 +17,7 @@ export function interpolate(
 ): string {
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (match, key) => {
-    const value = params[key];
+    const value = Object.hasOwn(params, key) ? params[key] : undefined;
     return value !== undefined ? String(value) : match;
   });
 }

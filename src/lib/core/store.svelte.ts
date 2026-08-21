@@ -13,7 +13,7 @@ import { interpolate } from './interpolate.js';
  * export const i18n = createI18n({
  *   defaultLocale: 'en',
  *   supportedLocales: ['en', 'pl'],
- *   loader: (locale) => import(`./messages/${locale}.json`).then(m => m.default),
+ *   loader: (locale) => import(`./messages/${locale}.json`),
  * });
  */
 export function createI18n(config: I18nConfig): I18nInstance {
@@ -23,15 +23,25 @@ export function createI18n(config: I18nConfig): I18nInstance {
 
   // Cache: locale → messages (never re-fetches the same locale)
   const cache = new Map<Locale, Messages>();
+  // In-flight loads, so two callers racing for the same locale share one fetch.
+  const pending = new Map<Locale, Promise<void>>();
 
-  /** Extract messages from a loader result, handling `{ default: {...} }` from dynamic imports. */
+  /**
+   * Extract messages from a loader result, handling `{ default: {...} }` from
+   * dynamic imports. The test is the SHAPE, not truthiness: a `Messages` value
+   * is always a string, so a catalog with a key literally named "default"
+   * (an ordinary word) is a catalog, not a module namespace.
+   */
   function unwrap(loaded: Messages | Record<string, unknown>): Messages {
     const maybeDefault = (loaded as Record<string, unknown>).default;
-    return (maybeDefault ? maybeDefault : loaded) as Messages;
+    return (maybeDefault && typeof maybeDefault === 'object' ? maybeDefault : loaded) as Messages;
   }
 
   function applyMessages(locale: Locale, msgs: Messages): void {
     cache.set(locale, msgs);
+    // A load that finished after the locale moved on stays cached but is never
+    // published — otherwise a slow catalog overwrites the one now on screen.
+    if (locale !== _locale) return;
     _messages = msgs;
     _isLoading = false;
   }
@@ -44,6 +54,9 @@ export function createI18n(config: I18nConfig): I18nInstance {
       return;
     }
 
+    const inFlight = pending.get(locale);
+    if (inFlight) return inFlight;
+
     const result = config.loader(locale);
     // Synchronous loader — apply immediately so SSR's first render has messages.
     if (!(result instanceof Promise)) {
@@ -52,16 +65,26 @@ export function createI18n(config: I18nConfig): I18nInstance {
     }
 
     _isLoading = true;
-    return result
+    const load = result
       .then((loaded) => applyMessages(locale, unwrap(loaded)))
       .catch((err) => {
         _isLoading = false;
         throw err;
-      });
+      })
+      .finally(() => pending.delete(locale));
+    pending.set(locale, load);
+    return load;
   }
 
-  // Eagerly load default locale
-  loadMessages(config.defaultLocale);
+  // Eagerly load the default locale. The promise is deliberately handled here:
+  // this runs at module scope in every consumer, and an unhandled rejection
+  // there takes the whole SSR process down under Node's default policy.
+  const initial = loadMessages(config.defaultLocale);
+  if (initial) {
+    initial.catch((err) => {
+      console.error(`[svelte-i18n] failed to load default locale "${config.defaultLocale}"`, err);
+    });
+  }
 
   // One PluralRules per locale — construction is the expensive part.
   const pluralRules = new Map<Locale, Intl.PluralRules>();
@@ -72,6 +95,11 @@ export function createI18n(config: I18nConfig): I18nInstance {
       pluralRules.set(locale, rules);
     }
     return rules.select(n);
+  }
+
+  /** Own keys only — `t('constructor')` must miss, not return Object's. */
+  function lookup(key: string): string | undefined {
+    return Object.hasOwn(_messages, key) ? _messages[key] : undefined;
   }
 
   return {
@@ -88,7 +116,7 @@ export function createI18n(config: I18nConfig): I18nInstance {
     },
 
     t(key: string, params?: Record<string, string | number>): string {
-      let value = _messages[key];
+      let value = lookup(key);
       // Plural selection: no exact key + a numeric `count` → CLDR-suffixed
       // variants (`key_one` / `key_few` / `key_many` / `key_other`), chosen by
       // Intl.PluralRules for the active locale. This is the convention app
@@ -96,9 +124,7 @@ export function createI18n(config: I18nConfig): I18nInstance {
       // category, same as CLDR. An exact key always wins, so nothing existing
       // changes meaning.
       if (value === undefined && typeof params?.count === 'number') {
-        value =
-          _messages[`${key}_${pluralCategory(_locale, params.count)}`] ??
-          _messages[`${key}_other`];
+        value = lookup(`${key}_${pluralCategory(_locale, params.count)}`) ?? lookup(`${key}_other`);
       }
       if (value === undefined) return key;
       return interpolate(value, params);
@@ -109,10 +135,20 @@ export function createI18n(config: I18nConfig): I18nInstance {
         console.warn(`[svelte-i18n] Locale "${locale}" is not in supportedLocales.`);
         return;
       }
-      if (locale === _locale && cache.has(locale)) return;
+      if (locale === _locale && (cache.has(locale) || pending.has(locale))) return;
+      const previous = _locale;
       _locale = locale;
-      const result = loadMessages(locale);
-      if (result) await result;
+      try {
+        const result = loadMessages(locale);
+        if (result) await result;
+      } catch (err) {
+        // The switch failed, so it did not happen: a UI reading `locale` must
+        // not claim a language whose messages never arrived.
+        _locale = previous;
+        const restored = cache.get(previous);
+        if (restored) _messages = restored;
+        throw err;
+      }
     },
   };
 }

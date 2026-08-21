@@ -69,7 +69,10 @@ export function extractLocale(
  * The default locale is returned un-prefixed. External, hash, and protocol
  * links (anything not starting with a single '/') are returned untouched.
  *
- * Preserves query strings and hashes: only the path segment is prefixed.
+ * Preserves query strings and hashes: only the path segment is prefixed. A path
+ * already carrying THIS locale's prefix is returned unchanged; one carrying a
+ * DIFFERENT locale's prefix is not — delocalize with {@link extractLocale}
+ * first when switching locales.
  *
  * @example
  * localizeHref('/krakow', 'en', cfg)         // → '/en/krakow'
@@ -87,11 +90,17 @@ export function localizeHref(
   if (locale === config.defaultLocale) return path;
   if (!config.supportedLocales.includes(locale)) return path;
 
+  // Prefix the PATH only. Splitting first is what keeps '/?a=b' from becoming
+  // '/en/?a=b' and stops a query from hiding an existing prefix from the guard.
+  const cut = path.search(/[?#]/);
+  const pathname = cut === -1 ? path : path.slice(0, cut);
+  const rest = cut === -1 ? '' : path.slice(cut);
+
   const seg = urlPrefix(locale, config);
   // Guard against double-prefixing if a caller passes an already-localized path.
-  if (path === `/${seg}` || path.startsWith(`/${seg}/`)) return path;
+  if (pathname === `/${seg}` || pathname.startsWith(`/${seg}/`)) return path;
 
-  return path === '/' ? `/${seg}` : `/${seg}${path}`;
+  return (pathname === '/' ? `/${seg}` : `/${seg}${pathname}`) + rest;
 }
 
 /**

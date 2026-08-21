@@ -9,8 +9,14 @@ export type Messages = Record<string, string>;
 /**
  * Function that loads messages for a given locale.
  * Can return synchronously (inline object) or asynchronously (dynamic import).
+ *
+ * A `{ default: Messages }` module namespace is accepted as-is, so
+ * `(locale) => import(`./messages/${locale}.json`)` typechecks without an
+ * `.then(m => m.default)` dance.
  */
-export type MessageLoader = (locale: Locale) => Promise<Messages> | Messages;
+export type MessageLoader = (
+  locale: Locale,
+) => Promise<Messages | { default: Messages }> | Messages | { default: Messages };
 
 /** Configuration for createI18n. */
 export interface I18nConfig {

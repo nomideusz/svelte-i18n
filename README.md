@@ -6,6 +6,8 @@ Minimal runtime-independent i18n for **Svelte 5** — a runes-based locale store
 
 **[Live demo → svelte-i18n-five.vercel.app](https://svelte-i18n-five.vercel.app/)**
 
+> **Stable since 1.0.** The API below is a promise: from here, anything that breaks a consumer costs a major version.
+
 ## Install
 
 ```bash
@@ -22,11 +24,18 @@ Create one i18n instance per app, point it at a loader function, import it anywh
 // src/lib/i18n.ts
 import { createI18n } from '@nomideusz/svelte-i18n';
 
+import en from './messages/en.json';
+import pl from './messages/pl.json';
+import de from './messages/de.json';
+
+const messages = { en, pl, de };
+
 export const i18n = createI18n({
   defaultLocale: 'en',
   supportedLocales: ['en', 'pl', 'de'],
-  // Dynamic imports = each locale is its own chunk, loaded on demand
-  loader: (locale) => import(`./messages/${locale}.json`),
+  // Synchronous: messages are there on the first render, which is what makes
+  // per-request SSR locales safe. Async loaders work too — see below.
+  loader: (locale) => messages[locale] ?? messages.en,
 });
 ```
 
@@ -101,9 +110,15 @@ A minimal drop-in `<select>`:
 />
 ```
 
-Without `labels`, each locale renders as its uppercase code (`EN`, `PL`, `DE`). The `disabled` state is wired to `i18n.isLoading` so users can't spam-switch while messages are still loading.
+Without `labels`, each locale renders as its uppercase code (`EN`, `PL`, `DE`). The `disabled` state is wired to `i18n.isLoading` so users can't spam-switch while messages are still loading. Every switch writes the choice to the `locale` cookie — the one `createLocaleHandle` reads — so it survives a reload.
 
-With URL-locale routing, pass the routing config so a switch actually navigates (`/krakow` → `/en/krakow`) and is remembered in the `locale` cookie that `createLocaleHandle` reads; `unprefixed` mirrors the handle's option for areas without a prefix (those reload in place):
+Set `label` to translate the control's accessible name; it defaults to English because something has to be there, and in an i18n library that string should not be the one you cannot change:
+
+```svelte
+<LocaleSwitcher {i18n} label={i18n.t('a11y.language')} />
+```
+
+With URL-locale routing, pass the routing config so a switch also navigates (`/krakow` → `/en/krakow`); `unprefixed` mirrors the handle's option for areas without a prefix (those reload in place):
 
 ```svelte
 <LocaleSwitcher {i18n} {routing} unprefixed={['/admin']} />
@@ -138,6 +153,32 @@ import { interpolate } from '@nomideusz/svelte-i18n';
 interpolate('Hello {name}', { name: 'Jan' }); // → 'Hello Jan'
 ```
 
+## Plurals
+
+Pass a numeric `count` and `t()` picks the CLDR plural form for the active locale — no ICU parser, no dependency; `Intl.PluralRules` does the selecting.
+
+```jsonc
+// pl.json — Polish needs three forms
+{
+  "school_one": "{count} szkoła",
+  "school_few": "{count} szkoły",
+  "school_many": "{count} szkół",
+  "school_other": "{count} szkoły"
+}
+```
+
+```ts
+i18n.t('school', { count: 1 });  // → "1 szkoła"
+i18n.t('school', { count: 3 });  // → "3 szkoły"
+i18n.t('school', { count: 12 }); // → "12 szkół"
+```
+
+Rules:
+- Suffixes are the CLDR categories: `_zero`, `_one`, `_two`, `_few`, `_many`, `_other`. Author only the ones your language uses — English needs `_one` and `_other`, Polish needs `_one`/`_few`/`_many`.
+- **`_other` is the required fallback.** If the selected category has no key, `_other` is used; if that is missing too, `t()` returns the key.
+- **An exact key always wins.** `"school": "…"` beats every suffixed variant, so adding plurals never changes an existing call.
+- `count` is interpolated like any other param — `{count}` in the message renders the number.
+
 ## Sync vs. async loaders
 
 The loader can return a `Messages` object directly **or** a promise. Sync loaders are applied immediately during construction — no microtask, no `isLoading` flash — so SSR-rendered first paint includes the default locale's messages. Async loaders flip `isLoading` to `true` while they resolve. Both `{ default: {...} }` (what dynamic JSON imports produce) and plain objects are accepted:
@@ -153,7 +194,9 @@ createI18n({
   loader: (locale) => (locale === 'pl' ? pl : en),
 });
 
-// Split into per-locale chunks (recommended for large apps)
+// Split into per-locale chunks. Note the SSR caveat below: under per-request
+// server rendering, prefer the synchronous form above.
+
 createI18n({
   defaultLocale: 'en',
   supportedLocales: ['en', 'pl', 'de', 'uk'],
@@ -247,7 +290,15 @@ import { routing } from '#lib/i18n-routing';
 export const handle = createLocaleHandle(routing, { unprefixed: ['/admin'] });
 ```
 
-Per request the handle: redirects a bare-root (`/`) visitor to their locale's home when it is not the default (cookie preference, else `Accept-Language`); resolves the locale from the URL prefix and sets `event.locals.locale`; keeps the `locale` cookie in sync (a client-side switcher may write the same cookie); and replaces `%lang%` in `app.html`. Cookie-less visitors on the default locale get no `Set-Cookie`, so their responses stay CDN-cacheable. Compose it with `sequence()` from `@sveltejs/kit/hooks` and declare `locale: string` in `App.Locals`.
+Per request the handle:
+
+- redirects a bare-root (`/`) visitor to their locale's home when it is not the default (cookie preference, else `Accept-Language`), **keeping the query string** — `/` is where ad traffic lands and `utm`/`gclid` must survive the hop;
+- resolves the locale from the URL prefix and sets `event.locals.locale`;
+- keeps the `locale` cookie in sync — but **only where the URL decided the locale**: a prefixed path, or the bare root. An un-prefixed path says nothing about a locale, so the default locale is an assumption there, and writing it would erase a preference the visitor made elsewhere;
+- ignores a cookie naming a locale you no longer serve (left in, it would suppress the redirect and let the canonical `/` serve a negotiated language);
+- replaces `%lang%` in `app.html`, and sends `Vary: accept-language, cookie` on the bare root — the one path whose response depends on who is asking.
+
+Cookie-less visitors on the default locale get no `Set-Cookie`, so their responses stay CDN-cacheable. Compose it with `sequence()` from `@sveltejs/kit/hooks` and declare `locale: string` in `App.Locals`.
 
 The lower-level `resolveLocale({ pathname, acceptLanguage }, routing)` is exported too: URL prefix wins; `Accept-Language` is only consulted at the bare root, so deep un-prefixed paths stay on the default locale and remain stable for crawlers.
 
@@ -291,12 +342,13 @@ interface LocaleRoutingConfig {
 | Function | Returns | Description |
 |----------|---------|-------------|
 | `extractLocale(pathname, cfg)` | `{ locale, pathname }` | Split a URL into its locale and delocalized path. Default locale is never a prefix. |
-| `localizeHref(path, locale, cfg)` | `string` | Add the locale prefix (default locale → unchanged). Preserves query/hash; ignores external/`mailto:`/`#`; never double-prefixes. |
+| `localizeHref(path, locale, cfg)` | `string` | Add the locale prefix (default locale → unchanged). Preserves query/hash; ignores external/`mailto:`/`#`; never double-prefixes **the same** locale — delocalize with `extractLocale` first when switching. |
 | `alternates(path, cfg, origin)` | `{ hreflang, href }[]` | `hreflang` link set for every locale plus `x-default`. Pass the delocalized path. |
 | `negotiateLocale(acceptLanguage, cfg)` | `string` | Best supported locale from `Accept-Language` (quality-weighted, primary-subtag match). Falls back to default. |
 | `resolveLocale({ pathname, acceptLanguage }, cfg)` | `string` | URL prefix wins; negotiate only at the bare root; deep un-prefixed paths stay default. |
 | `createReroute(cfg)` | `({ url }) => string` | SvelteKit `reroute` hook — maps prefixed URLs onto the un-prefixed route tree. |
 | `createLocaleHandle(cfg, { unprefixed? })` | SvelteKit `Handle` | Server hook: bare-root redirect, `locals.locale`, cookie sync, `%lang%`. |
+| `LOCALE_COOKIE` | `'locale'` | The preference cookie the handle and `<LocaleSwitcher />` share. |
 
 ### `createI18n(config)`
 
@@ -317,7 +369,7 @@ Returns an `I18nInstance`:
 | `locale` | `string` | Current locale (reactive) |
 | `isLoading` | `boolean` | True while loading a new locale (reactive) |
 | `supportedLocales` | `string[]` | The list passed to config |
-| `t(key, params?)` | `(string, obj?) => string` | Translate. Missing keys return the key itself. |
+| `t(key, params?)` | `(string, obj?) => string` | Translate, interpolate `{vars}`, and select a CLDR plural form when `params.count` is a number. Missing keys return the key itself. |
 | `setLocale(locale)` | `(string) => Promise<void>` | Switch locale. Warns and no-ops if unsupported. |
 
 ### `interpolate(template, params?)`
@@ -345,6 +397,11 @@ Pure and store-free — importable anywhere, server included.
 | `i18n` | `I18nInstance` | *required* |
 | `labels` | `Record<string, string>` | Optional locale code → display name map |
 | `class` | `string` | Optional CSS class on the `<select>` |
+| `label` | `string` | Accessible name for the control (default `'Select language'`) |
+| `routing` | `LocaleRoutingConfig` | Also navigate to the same page under the new locale's prefix |
+| `unprefixed` | `string[]` | Mirrors `createLocaleHandle`'s option — those areas reload in place |
+
+Every switch writes the `locale` cookie (exported as `LOCALE_COOKIE`), with or without `routing`.
 
 ## Development
 

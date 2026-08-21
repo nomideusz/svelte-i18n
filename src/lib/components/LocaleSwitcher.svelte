@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Locale, I18nInstance } from "../core/types.js";
   import { extractLocale, localizeHref, type LocaleRoutingConfig } from "../core/routing.js";
+  import { LOCALE_COOKIE } from "../core/hooks.js";
 
   interface Props {
     /**
@@ -13,14 +14,20 @@
      */
     labels?: Record<Locale, string>;
     /**
-     * Optional CSS class for the wrapper.
+     * Optional CSS class for the `<select>`.
      */
     class?: string;
     /**
-     * URL-locale routing config. When given, switching navigates to the same
-     * page under the new locale prefix and remembers the choice in the
-     * `locale` cookie (the one `createLocaleHandle` reads), so the server and
-     * the next request agree. Without it the switch is in-memory only.
+     * Accessible name for the control. Defaults to English because something
+     * must be there; translate it — this is an i18n library, and the one
+     * string it renders itself should not be the one string you cannot change.
+     */
+    label?: string;
+    /**
+     * URL-locale routing config. When given, switching also navigates to the
+     * same page under the new locale prefix. Without it the switch stays on
+     * the current URL. Either way the choice is written to the `locale`
+     * cookie that `createLocaleHandle` reads.
      */
     routing?: LocaleRoutingConfig;
     /**
@@ -30,13 +37,27 @@
     unprefixed?: string[];
   }
 
-  let { i18n, labels, class: className = "", routing, unprefixed = [] }: Props = $props();
+  let {
+    i18n,
+    labels,
+    class: className = "",
+    label = "Select language",
+    routing,
+    unprefixed = [],
+  }: Props = $props();
 
   function handleChange(e: Event) {
     const locale = (e.target as HTMLSelectElement).value;
-    i18n.setLocale(locale);
-    if (!routing || typeof window === "undefined") return;
-    document.cookie = `locale=${locale}; path=/; max-age=31536000; SameSite=Lax`;
+    // The promise is the caller's business, but an uncaught rejection from a
+    // failed catalog fetch is not — it would surface as an unhandled rejection.
+    void i18n.setLocale(locale).catch((err) => {
+      console.error(`[svelte-i18n] could not switch to "${locale}"`, err);
+    });
+    if (typeof window === "undefined") return;
+    // Persist regardless of routing: a switcher that forgets on reload is not
+    // a preference, and this is the cookie createLocaleHandle already reads.
+    document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; SameSite=Lax`;
+    if (!routing) return;
     const { pathname, search, hash } = window.location;
     const isApp = unprefixed.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     const target = isApp
@@ -51,7 +72,7 @@
   class="asini-locale-switcher {className}"
   value={i18n.locale}
   onchange={handleChange}
-  aria-label="Select language"
+  aria-label={label}
   disabled={i18n.isLoading}
 >
   {#each i18n.supportedLocales as loc (loc)}

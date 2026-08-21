@@ -159,4 +159,114 @@ describe('plural selection via count', () => {
 		const i18n = make('pl');
 		expect(i18n.t('nothing_here', { count: 2 })).toBe('nothing_here');
 	});
+
+	// ── regressions locked down for 1.0 ────────────────────────────────
+
+	it('a catalog key literally named "default" is a key, not a module namespace', () => {
+		// Truthiness would take the string "Domyślny" for the whole catalog and
+		// every key would render as itself.
+		const i18n = createI18n({
+			defaultLocale: 'pl',
+			supportedLocales: ['pl'],
+			loader: () => ({ default: 'Domyślny', save: 'Zapisz' }),
+		});
+
+		expect(i18n.t('save')).toBe('Zapisz');
+		expect(i18n.t('default')).toBe('Domyślny');
+	});
+
+	it('unwraps a real module namespace', async () => {
+		const i18n = createI18n({
+			defaultLocale: 'en',
+			supportedLocales: ['en'],
+			loader: async () => ({ default: { greeting: 'Hello {name}' } }),
+		});
+
+		await i18n.setLocale('en');
+		expect(i18n.t('greeting', { name: 'Jan' })).toBe('Hello Jan');
+	});
+
+	it('inherited Object keys are not messages', () => {
+		const i18n = createI18n({
+			defaultLocale: 'en',
+			supportedLocales: ['en'],
+			loader: () => ({ known: 'Known' }),
+		});
+
+		// Returned Object.prototype.constructor before the own-key guard — a
+		// function where the signature promises a string.
+		expect(i18n.t('constructor')).toBe('constructor');
+		expect(i18n.t('toString')).toBe('toString');
+		expect(i18n.t('__proto__')).toBe('__proto__');
+	});
+
+	it('a slow load for an abandoned locale never overwrites the current one', async () => {
+		const delays: Record<string, number> = { pl: 40, de: 1 };
+		const i18n = createI18n({
+			defaultLocale: 'en',
+			supportedLocales: ['en', 'pl', 'de'],
+			loader: (locale) =>
+				new Promise((r) =>
+					setTimeout(() => r({ hi: `hi-${locale}` }), delays[locale] ?? 1),
+				),
+		});
+
+		const slow = i18n.setLocale('pl');
+		await i18n.setLocale('de');
+		expect(i18n.t('hi')).toBe('hi-de');
+
+		await slow;
+		expect(i18n.locale).toBe('de');
+		expect(i18n.t('hi')).toBe('hi-de');
+		expect(i18n.isLoading).toBe(false);
+	});
+
+	it('concurrent callers for the same locale share one load', async () => {
+		const calls: string[] = [];
+		const i18n = createI18n({
+			defaultLocale: 'en',
+			supportedLocales: ['en', 'pl'],
+			loader: (locale) => {
+				calls.push(locale);
+				return new Promise((r) => setTimeout(() => r({ hi: `hi-${locale}` }), 5));
+			},
+		});
+
+		// The documented SSR recipe: the layout sets the locale while the eager
+		// default load is still in flight.
+		await i18n.setLocale('en');
+		expect(calls).toEqual(['en']);
+	});
+
+	it('a failed switch does not claim the locale it could not load', async () => {
+		const i18n = createI18n({
+			defaultLocale: 'en',
+			supportedLocales: ['en', 'pl'],
+			loader: (locale) =>
+				locale === 'pl' ? Promise.reject(new Error('offline')) : { hi: 'Hi' },
+		});
+
+		await expect(i18n.setLocale('pl')).rejects.toThrow('offline');
+		expect(i18n.locale).toBe('en');
+		expect(i18n.t('hi')).toBe('Hi');
+	});
+
+	it('a rejecting eager load is handled, not thrown at module scope', async () => {
+		// Node kills the SSR process on an unhandled rejection; createI18n runs at
+		// module scope in every consumer.
+		const seen: unknown[] = [];
+		const onUnhandled = (err: unknown) => seen.push(err);
+		process.on('unhandledRejection', onUnhandled);
+		try {
+			createI18n({
+				defaultLocale: 'en',
+				supportedLocales: ['en'],
+				loader: () => Promise.reject(new Error('network down')),
+			});
+			await new Promise((r) => setTimeout(r, 20));
+			expect(seen).toEqual([]);
+		} finally {
+			process.off('unhandledRejection', onUnhandled);
+		}
+	});
 });

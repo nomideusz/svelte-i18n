@@ -55,4 +55,46 @@ describe('createLocaleHandle', () => {
     expect(res.status).toBe(200);
     expect(locals.locale).toBe('pl');
   });
+
+  // ── regressions locked down for 1.0 ────────────────────────────────
+
+  it('keeps the query across the bare-root locale redirect', () => {
+    // '/' is where ad traffic lands; dropping utm/gclid loses the attribution.
+    return run(handle, '/?utm_source=fb&gclid=X', { accept: 'en' }).then(({ res }) => {
+      expect(res.status).toBe(302);
+      expect(res.headers.get('location')).toBe('/en?utm_source=fb&gclid=X');
+    });
+  });
+
+  it('ignores a cookie naming a locale the app no longer serves', async () => {
+    // Left in, it suppressed the redirect and the canonical '/' then served
+    // whatever Accept-Language negotiated.
+    const { res } = await run(handle, '/', { cookie: 'xx', accept: 'en' });
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/en');
+  });
+
+  it('does not erase a stored preference on a deep un-prefixed path', async () => {
+    // A visitor whose preference is 'en' opening a Polish canonical URL keeps
+    // it; the URL said nothing about a locale, so it decides nothing.
+    const { set, locals } = await run(handle, '/karnet/abc', { cookie: 'en' });
+    expect(set).toEqual([]);
+    expect(locals.locale).toBe('pl');
+  });
+
+  it('still syncs the cookie when the URL carries a prefix', async () => {
+    const { set, locals } = await run(handle, '/en/krakow', { cookie: 'pl' });
+    expect(locals.locale).toBe('en');
+    expect(set).toHaveLength(1);
+    expect((set[0] as unknown[])[1]).toBe('en');
+  });
+
+  it('varies the bare root on what decided it', async () => {
+    // The one path whose 200 depends on the visitor — a CDN must not hand it
+    // to someone the redirect was meant to send elsewhere.
+    const { res } = await run(handle, '/', { cookie: 'pl' });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('vary')).toContain('accept-language');
+    expect(res.headers.get('vary')).toContain('cookie');
+  });
 });

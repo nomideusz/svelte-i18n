@@ -23,4 +23,5 @@ export const uk: Messages = {
 	'school_few': '{count} школи',
 	'school_many': '{count} шкіл',
 	'school_other': '{count} школи',
+	'switcher.a11y': 'Виберіть мову',
 };

@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.0.0
+
+### Major Changes
+
+- 1.0.0 — the API is a promise now: from here, anything that breaks a consumer
+  costs a major. It ships with the defects a three-app audit turned up, because a
+  1.0 should freeze behaviour that is right.
+  
+  **Routing.** `localizeHref` prefixes the *path*, not the string: `/?a=b` was
+  becoming `/en/?a=b`, and a query hid an existing prefix from the double-prefix
+  guard (`/en?a=b` → `/en/en?a=b`). The bare-root redirect in `createLocaleHandle`
+  keeps the query string — `/` is where ad traffic lands, and utm/gclid were lost
+  on every non-default-locale entry.
+  
+  **The preference cookie.** `createLocaleHandle` writes it only where the URL
+  decided the locale — a prefixed path, or the bare root. An un-prefixed path says
+  nothing about a locale, so the default locale there is an assumption, and
+  writing it erased the visitor's stored choice on every deep un-prefixed request.
+  A cookie naming a locale the app no longer serves is ignored rather than obeyed:
+  left in, it suppressed the redirect and let the canonical `/` serve whatever
+  Accept-Language negotiated. The bare root now sends `Vary: accept-language,
+  cookie` — it is the one path whose response depends on who is asking.
+  
+  **The store.** A catalog key literally named `default` no longer collapses the
+  whole locale: the module-namespace unwrap tested truthiness, not shape. A slow
+  load for an abandoned locale is cached but never published, so switching PL then
+  DE no longer lands on DE-with-Polish-text, permanently. Concurrent loads of one
+  locale share a single fetch — the documented SSR recipe was issuing two. A
+  failed switch restores the previous locale instead of claiming one whose
+  messages never arrived, and the eager default-locale load handles its own
+  rejection: it runs at module scope in every consumer, where an unhandled one
+  takes the SSR process down with it. `t()` and `interpolate()` read own keys
+  only — `t('constructor')` returned a function where the signature promises a
+  string.
+  
+  **`<LocaleSwitcher />`.** `label` translates the accessible name; an i18n
+  library should not render one English string you cannot change. The choice is
+  written to the `locale` cookie with or without `routing`, so a switcher in a
+  preference-only app remembers instead of forgetting on the next reload. The
+  `setLocale` rejection is caught rather than left to surface as an unhandled one.
+  
+  New: `LOCALE_COOKIE`, the cookie name the handle and the switcher share, so
+  consumers that read it need not hardcode the string. `MessageLoader` accepts a
+  `{ default: Messages }` module namespace — the store already unwrapped one at
+  runtime, but the type rejected it, so the dynamic-import loader the README
+  recommended did not typecheck.
+  
+  Docs: plurals, the headline 0.6.0 feature, were documented nowhere; they have a
+  section now. The quick start leads with the synchronous loader every SSR
+  consumer actually uses, and the `<LocaleSwitcher />` reference lists the props
+  it grew in 0.5.1.
+
 ## 0.6.0
 
 ### Minor Changes

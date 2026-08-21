@@ -21,4 +21,5 @@ export const de: Messages = {
 	'footer.copy': 'Mit Sorgfalt gemacht.',
 	'school_one': '{count} Schule',
 	'school_other': '{count} Schulen',
+	'switcher.a11y': 'Sprache wählen',
 };

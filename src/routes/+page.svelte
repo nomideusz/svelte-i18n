@@ -103,7 +103,7 @@
 		supportedLocales: ['en', 'pl', 'de', 'uk'],
 		prefixes: { uk: 'ua' }, // URL /ua/… — hreflang stays "uk"
 	};
-	let routePath = $state('/blog/yoga-for-beginners');
+	let routePath = $state('/blog/yoga-for-beginners?utm_source=demo');
 	const routeExtracted = $derived(extractLocale(routePath, routingCfg));
 	const routeLinks = $derived(
 		routingCfg.supportedLocales.map((locale) => ({
@@ -301,7 +301,7 @@
 	<section class="card">
 		<header class="card-hd">
 			<h2>1½. Plurals — <code>t(key, {'{ count }'})</code></h2>
-			<span class="hd-meta">new in 0.6 · Intl.PluralRules picks key_one / _few / _many / _other</span>
+			<span class="hd-meta">Intl.PluralRules picks key_one / _few / _many / _other — an exact key always wins</span>
 		</header>
 
 		<div class="presets">
@@ -366,7 +366,7 @@
 	<section class="card">
 		<header class="card-hd">
 			<h2>3. <code>&lt;LocaleSwitcher /&gt;</code></h2>
-			<span class="hd-meta">drop-in <code>&lt;select&gt;</code> — style via <code>--asini-*</code> CSS vars</span>
+			<span class="hd-meta">drop-in <code>&lt;select&gt;</code> — style via <code>--asini-*</code> CSS vars · every switch writes the <code>locale</code> cookie</span>
 		</header>
 
 		<div class="switcher-examples">
@@ -378,6 +378,10 @@
 				<span class="ex-label">Without labels (code only)</span>
 				<LocaleSwitcher {i18n} />
 			</div>
+			<div class="switcher-ex">
+				<span class="ex-label">Translated accessible name (<code>label</code>)</span>
+				<LocaleSwitcher {i18n} labels={LOCALE_LABELS} label={i18n.t('switcher.a11y')} />
+			</div>
 		</div>
 
 		<pre class="snippet">{snippetCode}</pre>
@@ -387,7 +391,7 @@
 	<section class="card">
 		<header class="card-hd">
 			<h2>4. URL routing <span class="hd-meta">(SSR)</span></h2>
-			<span class="hd-meta">path-prefix locales — default <code>en</code> bare; <code>uk</code> aliased to <code>/ua</code> (hreflang stays <code>uk</code>)</span>
+			<span class="hd-meta">path-prefix locales — default <code>en</code> bare; <code>uk</code> aliased to <code>/ua</code> (hreflang stays <code>uk</code>) · only the path is prefixed, query and hash ride along</span>
 		</header>
 
 		<div class="row">

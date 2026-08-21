@@ -21,4 +21,5 @@ export const en: Messages = {
 	'footer.copy': 'Made with care.',
 	'school_one': '{count} school',
 	'school_other': '{count} schools',
+	'switcher.a11y': 'Select language',
 };
