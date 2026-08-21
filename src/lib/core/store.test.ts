@@ -108,3 +108,55 @@ describe('createI18n', () => {
 		expect(calls).toBe(2); // cached
 	});
 });
+
+describe('plural selection via count', () => {
+	const catalogs: Record<string, Record<string, string>> = {
+		pl: {
+			school_one: 'szkoła',
+			school_few: 'szkoły',
+			school_many: 'szkół',
+			entries_other: '{count} wejść',
+		},
+		en: {
+			school_one: 'school',
+			school_other: 'schools',
+			school: 'exact wins',
+		},
+	};
+	const make = (defaultLocale: string) =>
+		createI18n({
+			defaultLocale,
+			supportedLocales: ['en', 'pl'],
+			loader: (l) => catalogs[l],
+		});
+
+	it('picks the Polish one/few/many forms, mod-100 rules included', () => {
+		const i18n = make('pl');
+		expect(i18n.t('school', { count: 1 })).toBe('szkoła');
+		expect(i18n.t('school', { count: 3 })).toBe('szkoły');
+		expect(i18n.t('school', { count: 5 })).toBe('szkół');
+		expect(i18n.t('school', { count: 12 })).toBe('szkół'); // 12 is many, not few
+		expect(i18n.t('school', { count: 22 })).toBe('szkoły'); // 22 is few again
+	});
+
+	it('picks English one/other', async () => {
+		const i18n = make('pl');
+		await i18n.setLocale('en');
+		expect(i18n.t('school_one')).toBe('school'); // suffixed keys still work verbatim
+	});
+
+	it('an exact key beats plural expansion', async () => {
+		const i18n = make('en');
+		expect(i18n.t('school', { count: 2 })).toBe('exact wins');
+	});
+
+	it('falls back to _other when the category key is missing, and interpolates count', () => {
+		const i18n = make('pl');
+		expect(i18n.t('entries', { count: 7 })).toBe('7 wejść');
+	});
+
+	it('still returns the key when nothing matches', () => {
+		const i18n = make('pl');
+		expect(i18n.t('nothing_here', { count: 2 })).toBe('nothing_here');
+	});
+});

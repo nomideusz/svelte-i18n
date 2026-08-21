@@ -20,6 +20,7 @@
 	});
 
 	// ── Interpolate playground ──────────────────────────
+	let pluralCount = $state(5);
 	let template = $state('Hello {name}, you have {count} unread messages.');
 	let paramsJson = $state('{\n  "name": "Jan",\n  "count": 3\n}');
 	const parsedParams = $derived.by(() => {
@@ -292,6 +293,29 @@
 						{/each}
 					</div>
 				{/if}
+			</div>
+		</div>
+	</section>
+
+	<!-- ═══ Plurals (0.6) ═════════════════════════════════ -->
+	<section class="card">
+		<header class="card-hd">
+			<h2>1½. Plurals — <code>t(key, {'{ count }'})</code></h2>
+			<span class="hd-meta">new in 0.6 · Intl.PluralRules picks key_one / _few / _many / _other</span>
+		</header>
+
+		<div class="presets">
+			{#each [0, 1, 2, 5, 12, 22, 101] as n}
+				<button class="preset" class:preset-on={pluralCount === n} onclick={() => (pluralCount = n)}>{n}</button>
+			{/each}
+		</div>
+
+		<div class="output-grid">
+			<div class="out out-wide">
+				<span class="out-label">t('school', {'{ count: '}{pluralCount}{' }'}) — locale <code>{i18n.locale}</code></span>
+				<code class="out-val">{i18n.t('school', { count: pluralCount })}</code>
+				<span class="out-meta">CLDR category: <code>{new Intl.PluralRules(i18n.locale).select(pluralCount)}</code>
+					— English never needs <code>few</code>; Polish and Ukrainian live on it (2–4, except 12–14).</span>
 			</div>
 		</div>
 	</section>
@@ -844,6 +868,10 @@
 		color: var(--text);
 		border-color: var(--accent);
 		background: var(--accent-dim);
+	}
+	.preset-on {
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 
 	/* ─── Switcher examples ────────────────────────────── */

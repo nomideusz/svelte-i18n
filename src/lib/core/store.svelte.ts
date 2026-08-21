@@ -63,6 +63,17 @@ export function createI18n(config: I18nConfig): I18nInstance {
   // Eagerly load default locale
   loadMessages(config.defaultLocale);
 
+  // One PluralRules per locale — construction is the expensive part.
+  const pluralRules = new Map<Locale, Intl.PluralRules>();
+  function pluralCategory(locale: Locale, n: number): Intl.LDMLPluralRule {
+    let rules = pluralRules.get(locale);
+    if (!rules) {
+      rules = new Intl.PluralRules(locale);
+      pluralRules.set(locale, rules);
+    }
+    return rules.select(n);
+  }
+
   return {
     get locale() {
       return _locale;
@@ -77,7 +88,18 @@ export function createI18n(config: I18nConfig): I18nInstance {
     },
 
     t(key: string, params?: Record<string, string | number>): string {
-      const value = _messages[key];
+      let value = _messages[key];
+      // Plural selection: no exact key + a numeric `count` → CLDR-suffixed
+      // variants (`key_one` / `key_few` / `key_many` / `key_other`), chosen by
+      // Intl.PluralRules for the active locale. This is the convention app
+      // catalogs already used by hand; `_other` is the required fallback
+      // category, same as CLDR. An exact key always wins, so nothing existing
+      // changes meaning.
+      if (value === undefined && typeof params?.count === 'number') {
+        value =
+          _messages[`${key}_${pluralCategory(_locale, params.count)}`] ??
+          _messages[`${key}_other`];
+      }
       if (value === undefined) return key;
       return interpolate(value, params);
     },

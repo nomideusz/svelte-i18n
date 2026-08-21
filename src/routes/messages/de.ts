@@ -19,4 +19,6 @@ export const de: Messages = {
 	'greeting.notifications': 'Du hast {count} neue Benachrichtigungen.',
 	'billing.total': 'Gesamt: {amount} {currency}',
 	'footer.copy': 'Mit Sorgfalt gemacht.',
+	'school_one': '{count} Schule',
+	'school_other': '{count} Schulen',
 };

@@ -19,4 +19,8 @@ export const uk: Messages = {
 	'greeting.notifications': 'У вас {count} нових сповіщень.',
 	'billing.total': 'Разом: {amount} {currency}',
 	'footer.copy': 'Зроблено з любов\'ю.',
+	'school_one': '{count} школа',
+	'school_few': '{count} школи',
+	'school_many': '{count} шкіл',
+	'school_other': '{count} школи',
 };

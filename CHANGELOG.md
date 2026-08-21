@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.6.0
+
+### Minor Changes
+
+- e0ef585: `t(key, { count })` now selects CLDR plural forms. When no exact key exists
+  and `count` is a number, `t` resolves `key_one` / `key_few` / `key_many` /
+  `key_other` via `Intl.PluralRules` for the active locale, falling back to
+  `_other`. This is the suffix convention app catalogs already used by hand —
+  the apps had grown four separate selectors for it: two inline
+  `Intl.PluralRules` template-key helpers, a hand-written mod-10/mod-100
+  Polish rule function duplicated across two pages, and one plain-wrong
+  ternary that rendered "2 zajęć" where Polish requires "2 zajęcia". An exact
+  key always wins, so every existing call is unchanged. Zero dependencies,
+  as before: the browser does the selecting.
+
 ## 0.5.1 — 2026-08-17
 
 ### Added

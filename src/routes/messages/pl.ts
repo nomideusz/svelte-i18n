@@ -19,4 +19,8 @@ export const pl: Messages = {
 	'greeting.notifications': 'Masz {count} nowych powiadomień.',
 	'billing.total': 'Razem: {amount} {currency}',
 	'footer.copy': 'Tworzone z troską.',
+	'school_one': '{count} szkoła',
+	'school_few': '{count} szkoły',
+	'school_many': '{count} szkół',
+	'school_other': '{count} szkoły',
 };
