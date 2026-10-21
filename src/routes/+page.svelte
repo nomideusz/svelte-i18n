@@ -159,6 +159,21 @@
 		'</' +
 		'script>\n\n' +
 		"<LocaleSwitcher {i18n} labels={{ en: 'English', pl: 'Polski' }} />";
+
+	// Sites running this package, and zaur.app's language versions.
+	const PROD_LOCALES = [
+		['https://zaur.app', 'English'],
+		['https://zaur.app/pl', 'Polski'],
+		['https://zaur.app/de', 'Deutsch'],
+		['https://zaur.app/fr', 'Français'],
+		['https://zaur.app/ua', 'Українська']
+	];
+	const PROD_SITES = [
+		['https://szkolyjogi.pl', 'yoga school directory'],
+		['https://thebest.travel', 'travel guide'],
+		['https://kino.net.pl', 'cinema listings'],
+		['https://festivals.zaur.app', 'festival guide']
+	];
 </script>
 
 <svelte:head>
@@ -244,6 +259,34 @@
 					{LOCALE_LABELS[loc] ?? loc.toUpperCase()}
 				</button>
 			{/each}
+		</div>
+	</section>
+
+	<!-- ═══ In production ══════════════════════════════════ -->
+	<section class="card">
+		<header class="card-hd">
+			<h2>In production</h2>
+			<span class="hd-meta">real sites, not mock-ups</span>
+		</header>
+		<div class="prod">
+			<div class="prod-main">
+				<p class="prod-name"><a href="https://zaur.app">zaur.app</a></p>
+				<p class="prod-what">
+					A portfolio in five languages from one route: English at the root, the rest under
+					<code>/pl</code> <code>/de</code> <code>/fr</code> <code>/ua</code> (served as <code>uk</code>), with
+					<code>createReroute</code>, flat JSON catalogs, CLDR plurals and the
+					<code>&lt;LocaleSwitcher /&gt;</code> in its header.
+				</p>
+				<p class="prod-links">
+					{#each PROD_LOCALES as [href, label] (href)}<a {href}>{label}</a>{/each}
+				</p>
+				<a class="prod-keys" href="https://zaur.app/#keys">See the whole page as its message keys →</a>
+			</div>
+			<ul class="prod-more">
+				{#each PROD_SITES as [href, what] (href)}
+					<li><a {href}>{new URL(href).host}</a> <span>{what}</span></li>
+				{/each}
+			</ul>
 		</div>
 	</section>
 
@@ -592,6 +635,75 @@
 		color: var(--accent);
 		margin-left: 6px;
 		font-style: italic;
+	}
+
+	/* ─── In production ────────────────────────────────── */
+	.prod {
+		display: grid;
+		grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+		gap: 20px 32px;
+	}
+	@media (max-width: 720px) {
+		.prod {
+			grid-template-columns: 1fr;
+		}
+	}
+	.prod a {
+		color: var(--accent);
+		text-decoration: none;
+	}
+	.prod a:hover {
+		text-decoration: underline;
+	}
+	.prod-name {
+		font: 600 20px/1.2 'Outfit', system-ui, sans-serif;
+		margin: 0 0 8px;
+	}
+	.prod-what {
+		font: 400 14px/1.6 'Outfit', system-ui, sans-serif;
+		color: var(--text-2);
+		margin: 0 0 12px;
+	}
+	.prod-what code {
+		font: 500 12.5px/1.3 ui-monospace, 'Cascadia Code', monospace;
+		color: var(--text);
+		background: var(--surface-2);
+		padding: 1px 5px;
+		border-radius: 3px;
+	}
+	.prod-links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin: 0 0 14px;
+	}
+	.prod-links a {
+		font: 500 13px/1 'Outfit', system-ui, sans-serif;
+		padding: 6px 10px;
+		border: 1px solid var(--border-strong);
+		border-radius: 6px;
+	}
+	.prod-keys {
+		font: 500 14px/1.4 'Outfit', system-ui, sans-serif;
+	}
+	.prod-more {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		font: 400 14px/1.5 'Outfit', system-ui, sans-serif;
+	}
+	.prod-more li {
+		padding: 8px 0;
+		border-top: 1px solid var(--border);
+	}
+	.prod-more li:first-child {
+		border-top: 0;
+		padding-top: 0;
+	}
+	.prod-more span {
+		display: block;
+		color: var(--text-3);
+		font-size: 13px;
 	}
 
 	/* ─── Preview ──────────────────────────────────────── */
