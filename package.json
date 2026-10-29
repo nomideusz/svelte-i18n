@@ -41,11 +41,9 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^8.0.0",
-    "@sveltejs/adapter-vercel": "^7.0.0",
     "@sveltejs/kit": "^3.0.0",
     "@sveltejs/package": "^3.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
-    "marked": "^17.0.6",
     "svelte": "^5.57.1",
     "svelte-check": "^4.7.1",
     "typescript": "^6.0.3",
@@ -68,5 +66,5 @@
     "type": "git",
     "url": "https://github.com/nomideusz/svelte-i18n"
   },
-  "homepage": "https://svelte-i18n-five.vercel.app/"
+  "homepage": "https://svelte.zaur.app/i18n"
 }

@@ -4,7 +4,7 @@
 
 Minimal runtime-independent i18n for **Svelte 5** — a runes-based locale store, flat JSON messages, `{variable}` interpolation, and a tiny `<LocaleSwitcher />` component. No build-time code generation, no ICU message format, no global side effects.
 
-**[Live demo → svelte-i18n-five.vercel.app](https://svelte-i18n-five.vercel.app/)**
+**[Live demo → svelte.zaur.app/i18n](https://svelte.zaur.app/i18n)**
 
 > **Stable since 1.0.** The API below is a promise: from here, anything that breaks a consumer costs a major version.
 
@@ -447,7 +447,6 @@ Every switch writes the `locale` cookie (exported as `LOCALE_COOKIE`), with or w
 
 ```bash
 pnpm install
-pnpm dev             # SvelteKit dev server (demo)
 pnpm check           # Typecheck
 pnpm test            # Vitest
 pnpm run package     # Build the library
